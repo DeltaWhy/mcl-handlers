@@ -6,7 +6,12 @@ module DeltaWhy
   # !uhc pre
   # !uhc start
   # !uhc stop
+  # !uhc time
   class UHC < Mcl::Handler
+    class << self
+      attr_accessor start_time
+    end
+
     def setup
       register_uhc(:mod)
       register_parsers
@@ -16,7 +21,8 @@ module DeltaWhy
       d = [["option [<key> [<value>]]", "get or set game options"],
            ["pre", "set up for pre-game"],
            ["start", "start the game"],
-           ["stop", "stop the game"]]
+           ["stop", "stop the game"],
+           ["time", "see the elapsed time"]]
       d.each do |cmd, desc|
         trawt(player, "UHC", {text: cmd, color: "gold"},
               {text: " #{desc}", color: "reset"})
@@ -62,6 +68,9 @@ module DeltaWhy
           $mcl.server.invoke "/setworldspawn 0 255 0"
           $mcl.server.invoke "/worldborder center 0 0"
           $mcl.server.invoke "/worldborder set #{2*UHC.options[:border_radius]}" if UHC.options[:border_radius] > 0
+          $mcl.server.invoke "/scoreboard objectives add health health Health"
+          $mcl.server.invoke "/scoreboard objectives setdisplay list health"
+          $mcl.server.invoke "/scoreboard objectives setdisplay belowName health"
         when "start"
           $mcl.server.invoke "/effect @a[m=0] minecraft:saturation 1 100"
           $mcl.server.invoke "/effect @a[m=0] minecraft:instant_health 1 100"
@@ -69,12 +78,23 @@ module DeltaWhy
           $mcl.server.invoke "/effect @a[m=0] minecraft:mining_fatigue 9999 100"
           $mcl.server.invoke "/effect @a[m=0] minecraft:blindness 9999"
           $mcl.server.invoke "/clear @a[m=0]"
-          #$mcl.server.invoke "/spreadplayers 0 0 #{UHC.options[:min_scatter_distance]} #{UHC.options[:scatter_radius]} true @a[m=0]"
-          traw "@a", "Game starts in #{UHC.options[:start_delay]} seconds!", color: "gold" 
+          $mcl.server.invoke "/spreadplayers 0 0 #{UHC.options[:min_scatter_distance]} #{UHC.options[:scatter_radius]} true @a[m=0]" if UHC.options[:do_scatter]
+          traw "@a", "Game starts in #{UHC.options[:start_delay]} seconds!", color: "gold"
           schedule "start UHC", Time.now+UHC.options[:start_delay].seconds, StartTask.new
         when "stop"
           Task.where(name: "episode marker").destroy_all
           traw "@a", "Game stopped.", color: "gold"
+          UHC.start_time = nil
+        when "time"
+          if UHC.start_time
+            duration = (Time.now - UHC.start_time)
+            hours, duration = duration.divmod 3600
+            minutes, seconds = duration.divmod 60
+            time = sprintf "%d:%02d:%02d", hours, minutes, seconds
+            traw player, "#{time} elapsed.", color: "light_purple"
+          else
+            traw player, "Game is not running.", color: "light_purple"
+          end
         else
           usage(player)
         end
@@ -83,6 +103,7 @@ module DeltaWhy
 
     def register_parsers
       register_parser(/\A(\S+) (fell|was doomed to fall|was struck by lightning|went up in flames|walked into fire whilst fighting|burned to death|was burned to a crisp whilst fighting|tried to swim in lava|suffocated in a wall|drowned|starved to death|was pricked to death|walked into a cactus whilst trying to escape|died|blew up|was blown up by|was killed by magic|withered away|was squashed by a falling|was (slain|shot|fireballed|pummeled|killed) by|was killed trying to hurt|hit the ground too hard)\z/) do |res, r|
+        next unless UHC.start_time
         $mcl.log.info("#{r[1]} died")
         $mcl.server.invoke "/gamemode 3 #{r[1]}"
         $mcl.log.info("invoked gamemode")
@@ -95,12 +116,13 @@ module DeltaWhy
     end
 
     def self.options
-      @options ||= {start_delay: 5,
+      @options ||= {start_delay: 15,
                     deathban: false,
                     episode_duration: -1,
                     border_radius: 1500,
                     min_border_radius: -1,
                     border_duration: -1,
+                    do_scatter: true,
                     scatter_radius: 1000,
                     min_scatter_distance: 100,
                    }
@@ -123,6 +145,7 @@ module DeltaWhy
         end
         $mcl.server.traw "@a", "Let the games begin!", color: "red"
         $mcl.scheduler.schedule "episode marker", Time.now+UHC.options[:episode_duration].minutes, EpisodeTask.new(UHC.options[:episode_duration]) if UHC.options[:episode_duration] > 0
+        UHC.start_time = Time.now
       end
     end
 
