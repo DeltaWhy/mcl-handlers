@@ -10,6 +10,7 @@ module DeltaWhy
   class UHC < Mcl::Handler
     class << self
       attr_accessor :start_time
+      attr_accessor :is_starting
     end
 
     def setup
@@ -72,6 +73,11 @@ module DeltaWhy
           $mcl.server.invoke "/scoreboard objectives setdisplay list health"
           $mcl.server.invoke "/scoreboard objectives setdisplay belowName health"
         when "start"
+          if UHC.is_starting or UHC.start_time
+            traw player, "Game is already running!", color: "red"
+            next
+          end
+          UHC.is_starting = true
           $mcl.server.invoke "/effect @a[m=0] minecraft:saturation 1 100"
           $mcl.server.invoke "/effect @a[m=0] minecraft:instant_health 1 100"
           $mcl.server.invoke "/effect @a[m=0] minecraft:slowness 9999 100"
@@ -82,9 +88,15 @@ module DeltaWhy
           traw "@a", "Game starts in #{UHC.options[:start_delay]} seconds!", color: "gold"
           schedule "start UHC", Time.now+UHC.options[:start_delay].seconds, StartTask.new
         when "stop"
-          Mcl::Task.where(name: "episode marker").destroy_all
-          traw "@a", "Game stopped.", color: "gold"
-          UHC.start_time = nil
+          if UHC.start_time or UHC.is_starting
+            Mcl::Task.where(name: "start UHC").destroy_all
+            Mcl::Task.where(name: "episode marker").destroy_all
+            traw "@a", "Game stopped.", color: "gold"
+            UHC.start_time = nil
+            UHC.is_starting = false
+          else
+            traw player, "Game is not running.", color: "red"
+          end
         when "time"
           if UHC.start_time
             duration = (Time.now - UHC.start_time)
@@ -146,6 +158,7 @@ module DeltaWhy
         $mcl.server.traw "@a", "Let the games begin!", color: "red"
         $mcl.scheduler.schedule "episode marker", Time.now+UHC.options[:episode_duration].minutes, EpisodeTask.new(UHC.options[:episode_duration]) if UHC.options[:episode_duration] > 0
         UHC.start_time = Time.now
+        UHC.is_starting = false
       end
     end
 
