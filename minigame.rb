@@ -71,7 +71,7 @@ module DeltaWhy
       announce_server_restart
       async do
         sleep 5
-        FileUtils.rm_r "#{$mcl.server.root}/#{game}/"
+        FileUtils.rm_r "#{$mcl.server.root}/#{game}/" if File.exists? "#{$mcl.server.root}/#{game}/"
         FileUtils.cp_r "#{$mcl.server.root}/minigames/#{game}/", $mcl.server.root
         FileUtils.cp "#{$mcl.server.root}/server.properties", "#{$mcl.server.root}/default.properties" if current_world == "world"
         FileUtils.rm "#{$mcl.server.root}/server.properties"
