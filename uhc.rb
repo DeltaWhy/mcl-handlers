@@ -82,7 +82,7 @@ module DeltaWhy
           traw "@a", "Game starts in #{UHC.options[:start_delay]} seconds!", color: "gold"
           schedule "start UHC", Time.now+UHC.options[:start_delay].seconds, StartTask.new
         when "stop"
-          Task.where(name: "episode marker").destroy_all
+          Mcl::Task.where(name: "episode marker").destroy_all
           traw "@a", "Game stopped.", color: "gold"
           UHC.start_time = nil
         when "time"
