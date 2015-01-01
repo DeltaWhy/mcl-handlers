@@ -9,7 +9,7 @@ module DeltaWhy
   # !uhc time
   class UHC < Mcl::Handler
     class << self
-      attr_accessor start_time
+      attr_accessor :start_time
     end
 
     def setup
