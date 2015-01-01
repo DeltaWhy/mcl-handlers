@@ -102,9 +102,9 @@ module DeltaWhy
     end
 
     def register_parsers
-      register_parser(/\A(\S+) (fell|was doomed to fall|was struck by lightning|went up in flames|walked into fire whilst fighting|burned to death|was burned to a crisp whilst fighting|tried to swim in lava|suffocated in a wall|drowned|starved to death|was pricked to death|walked into a cactus whilst trying to escape|died|blew up|was blown up by|was killed by magic|withered away|was squashed by a falling|was (slain|shot|fireballed|pummeled|killed) by|was killed trying to hurt|hit the ground too hard)\z/) do |res, r|
-        next unless UHC.start_time
+      register_parser(/\A(\S+) (fell|was doomed to fall|was struck by lightning|went up in flames|walked into fire whilst fighting|burned to death|was burned to a crisp whilst fighting|tried to swim in lava|suffocated in a wall|drowned|starved to death|was pricked to death|walked into a cactus whilst trying to escape|died|blew up|was blown up by|was killed by magic|withered away|was squashed by a falling|was (slain|shot|fireballed|pummeled|killed) by|was killed trying to hurt|hit the ground too hard)/) do |res, r|
         $mcl.log.info("#{r[1]} died")
+        next unless UHC.start_time
         $mcl.server.invoke "/gamemode 3 #{r[1]}"
         $mcl.log.info("invoked gamemode")
         if UHC.options[:deathban]
